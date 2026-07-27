@@ -5,6 +5,7 @@ import com.wajeed.ecommerce.dto.OrderResponseDto;
 import com.wajeed.ecommerce.exception.CartNotFoundException;
 import com.wajeed.ecommerce.exception.InsufficientStockException;
 import com.wajeed.ecommerce.exception.OrderNotFoundException;
+import com.wajeed.ecommerce.exception.ProductNotFoundException;
 import com.wajeed.ecommerce.model.*;
 import com.wajeed.ecommerce.repository.*;
 import org.springframework.security.core.Authentication;
@@ -109,8 +110,9 @@ public class OrderServiceImp implements OrderService {
         Order order = new Order();
 
         for (CartItem cartItem : cart.getCartItems()) {
-            Product product = cartItem.getProduct();
 
+               Product product =  productRepository.findByIdWithLock(cartItem.getProduct().getId())
+                       .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
             if (product.getStockQuantity() < cartItem.getQuantity()) {
                 throw new InsufficientStockException("Insufficient stock for product: " + product.getName());
