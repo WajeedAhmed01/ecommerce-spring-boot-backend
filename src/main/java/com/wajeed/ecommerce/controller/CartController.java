@@ -1,6 +1,7 @@
 package com.wajeed.ecommerce.controller;
 
 import com.wajeed.ecommerce.dto.CartRequest;
+import com.wajeed.ecommerce.dto.CartResponse;
 import com.wajeed.ecommerce.service.CartService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,5 +28,12 @@ public class CartController
     {
         cartService.addProductToCart(authentication, cartRequest);
         return new ResponseEntity<>("Product successfully added to cart!", HttpStatus.OK);
+    }
+
+    @GetMapping
+    public ResponseEntity<CartResponse> viewCart(Authentication authentication)
+    {
+       CartResponse cartResponse =  cartService.viewCart(authentication);
+       return new ResponseEntity<>(cartResponse , HttpStatus.OK);
     }
 }

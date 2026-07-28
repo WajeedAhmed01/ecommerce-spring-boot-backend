@@ -1,6 +1,8 @@
 package com.wajeed.ecommerce.service;
 
+import com.wajeed.ecommerce.dto.CartItemResponse;
 import com.wajeed.ecommerce.dto.CartRequest;
+import com.wajeed.ecommerce.dto.CartResponse;
 import com.wajeed.ecommerce.exception.CartNotFoundException;
 import com.wajeed.ecommerce.exception.InsufficientStockException;
 import com.wajeed.ecommerce.exception.ProductNotFoundException;
@@ -14,10 +16,13 @@ import com.wajeed.ecommerce.repository.ProductRepository;
 import com.wajeed.ecommerce.repository.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class CartServiceImp implements CartService {
@@ -101,5 +106,44 @@ public class CartServiceImp implements CartService {
         cart.setPrice(finalCartPrice);
 
         cartRepository.save(cart);
+    }
+
+    public CartResponse viewCart(Authentication authentication)
+    {
+       String email =  authentication.getName();
+
+      Users user = userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException
+              ("User Not Found")
+      );
+      Cart cart = cartRepository.findByUserId(user.getId()).orElseThrow(()-> new CartNotFoundException(
+              "cart not found"
+      ));
+        CartResponse cartResponse = new CartResponse();
+        cartResponse.setCartId(cart.getId());
+        cartResponse.setUserID(cart.getUser().getId());
+        cartResponse.setTotalPrice(cart.getPrice());
+
+        List<CartItemResponse> cartItemResponseList = new ArrayList<>();
+
+        for(CartItem item : cart.getCartItems())
+        {
+            CartItemResponse cartItemResponse = new CartItemResponse();
+            cartItemResponse.setCartItemId(item.getId());
+            cartItemResponse.setProductId(item.getProduct().getId());
+            cartItemResponse.setProductName(item.getProduct().getName());
+            cartItemResponse.setPrice(item.getProduct().getPrice());
+            cartItemResponse.setQuantity(item.getQuantity());
+
+            BigDecimal subTotal = item.getProduct()
+                    .getPrice()
+                    .multiply(BigDecimal.valueOf(item.getQuantity()));
+
+            cartItemResponse.setSubtotal(subTotal);
+
+            cartItemResponseList.add(cartItemResponse);
+        }
+        cartResponse.setCartItemResponse(cartItemResponseList);
+
+        return cartResponse;
     }
 }
