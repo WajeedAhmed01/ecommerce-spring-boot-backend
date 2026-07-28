@@ -28,17 +28,17 @@ import java.util.List;
 public class CartServiceImp implements CartService {
 
     private final CartRepository cartRepository;
-    private final CartItemRepo cartItemRepo;
+
     private final ProductRepository productRepository;
     private final UserRepo userRepo;
 
     @Autowired
     public CartServiceImp(CartRepository cartRepository,
-                          CartItemRepo cartItemRepo,
+
                           ProductRepository productRepository,
                           UserRepo userRepo) {
         this.cartRepository = cartRepository;
-        this.cartItemRepo = cartItemRepo;
+
         this.productRepository = productRepository;
         this.userRepo = userRepo;
     }
@@ -49,7 +49,8 @@ public class CartServiceImp implements CartService {
 
         String email = authentication.getName();
 
-        Users user = userRepo.findByEmail(email).orElseThrow();
+        Users user = userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException
+                ("User Not Found"));
 
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new CartNotFoundException(
@@ -92,16 +93,7 @@ public class CartServiceImp implements CartService {
             cart.getCartItems().add(newItem);
         }
 
-        BigDecimal finalCartPrice = BigDecimal.ZERO;
-
-        for (CartItem item : cart.getCartItems()) {
-            BigDecimal itemPrice = item.getProduct().getPrice();
-            Integer itemQuantity = item.getQuantity();
-
-            finalCartPrice = finalCartPrice.add(
-                    itemPrice.multiply(BigDecimal.valueOf(itemQuantity))
-            );
-        }
+       BigDecimal finalCartPrice = calculateCartTotal(cart);
 
         cart.setPrice(finalCartPrice);
 
@@ -145,5 +137,55 @@ public class CartServiceImp implements CartService {
         cartResponse.setCartItemResponse(cartItemResponseList);
 
         return cartResponse;
+    }
+
+    @Override
+    @Transactional
+    public void removeCartItem(Authentication authentication,Long productId) {
+        String email = authentication.getName();
+
+        Users user = userRepo.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException
+                ("User Not Found")
+        );
+        Cart cart = cartRepository.findByUserId(user.getId()).orElseThrow(() -> new CartNotFoundException(
+                "cart not found"));
+
+
+        CartItem cartItem = null;
+
+            for (CartItem item : cart.getCartItems()) {
+                if (item.getProduct().getId().equals(productId))
+                {
+                    cartItem = item;
+                    break;
+                }
+            }
+
+            if(cartItem == null)
+            {
+                throw new ProductNotFoundException("Product not found");
+            }
+            cart.getCartItems().remove(cartItem);
+
+           BigDecimal total = calculateCartTotal(cart);
+
+        cart.setPrice(total);
+        cartRepository.save(cart);
+    }
+
+    private BigDecimal calculateCartTotal(Cart cart)
+    {
+        BigDecimal finalCartPrice = BigDecimal.ZERO;
+
+        for (CartItem item : cart.getCartItems()) {
+            BigDecimal itemPrice = item.getProduct().getPrice();
+            Integer itemQuantity = item.getQuantity();
+
+            finalCartPrice = finalCartPrice.add(
+                    itemPrice.multiply(BigDecimal.valueOf(itemQuantity))
+            );
+
+        }
+        return finalCartPrice;
     }
 }
