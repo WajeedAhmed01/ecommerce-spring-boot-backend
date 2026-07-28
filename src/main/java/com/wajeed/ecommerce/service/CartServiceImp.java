@@ -157,6 +157,24 @@ public class CartServiceImp implements CartService {
         cart.setPrice(total);
         cartRepository.save(cart);
     }
+
+    @Override
+    @Transactional
+    public void clearCart(Authentication authentication)
+    {
+        Cart cart = getAuthenticatedCart(authentication);
+
+        if (cart.getCartItems().isEmpty()) {
+            throw new CartNotFoundException("Cart is already empty");
+        }
+
+        cart.getCartItems().clear();
+
+        cart.setPrice(BigDecimal.ZERO);
+
+        cartRepository.save(cart);
+    }
+
     @Override
     public CartResponse viewCart(Authentication authentication)
     {

@@ -61,4 +61,12 @@ public class CartController
 
         return new ResponseEntity<>("Cart item updated successfully", HttpStatus.OK);
     }
+
+    @DeleteMapping
+    public ResponseEntity<String> clearCart(Authentication authentication)
+    {
+        cartService.clearCart(authentication);
+
+        return new ResponseEntity<>("Cart cleared successfully", HttpStatus.OK);
+    }
 }

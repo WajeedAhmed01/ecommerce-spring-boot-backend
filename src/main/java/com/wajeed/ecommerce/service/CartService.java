@@ -13,4 +13,5 @@ public interface CartService
     public void removeCartItem(Authentication authentication,Long productId);
     public void updateCartItem(Authentication authentication , Long productId,
                                CartItemRequest cartItemRequest);
+    public void clearCart(Authentication authentication);
 }
