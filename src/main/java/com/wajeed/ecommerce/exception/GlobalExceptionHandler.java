@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ExceptionHandler(MethodArgumentNotValidException.class )
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
 
         String errorMessage = ex.getBindingResult()
@@ -29,7 +29,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             SkuAlreadyExistException.class,
             EmailAlreadyExistsException.class,
-            InvalidEmailException.class
+            InvalidEmailException.class,
+            InvalidIdempotencyKeyException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequestExceptions(RuntimeException ex) {
 
@@ -48,7 +49,8 @@ public class GlobalExceptionHandler {
             CartNotFoundException.class,
             CartItemNotFoundException.class,
             InsufficientStockException.class,
-            OrderNotFoundException.class
+            OrderNotFoundException.class,
+            UserNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFoundExceptions(RuntimeException ex) {
 

@@ -2,10 +2,7 @@ package com.wajeed.ecommerce.service;
 
 import com.wajeed.ecommerce.dto.OrderItemResponse;
 import com.wajeed.ecommerce.dto.OrderResponseDto;
-import com.wajeed.ecommerce.exception.CartNotFoundException;
-import com.wajeed.ecommerce.exception.InsufficientStockException;
-import com.wajeed.ecommerce.exception.OrderNotFoundException;
-import com.wajeed.ecommerce.exception.ProductNotFoundException;
+import com.wajeed.ecommerce.exception.*;
 import com.wajeed.ecommerce.model.*;
 import com.wajeed.ecommerce.repository.*;
 import org.springframework.security.core.Authentication;
@@ -42,7 +39,8 @@ public class OrderServiceImp implements OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getUserOrderHistory(Authentication authentication) {
         String email = authentication.getName();
-        Users user = userRepo.findByEmail(email).orElseThrow();
+        Users user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         List<Order> orders = orderRepo.findByUserId(user.getId());
 
@@ -52,25 +50,7 @@ public class OrderServiceImp implements OrderService {
 
         List<OrderResponseDto> responseDtoList = new ArrayList<>();
         for (Order order : orders) {
-            OrderResponseDto dto = new OrderResponseDto();
-            dto.setId(order.getId());
-            dto.setOrderDate(order.getOrderDate());
-            dto.setStatus(order.getStatus());
-            dto.setTotalPrice(order.getTotalPrice());
-
-            List<OrderItemResponse> itemDtoList = new ArrayList<>();
-            for (OrderItem items : order.getOrderItems()) {
-                OrderItemResponse item = new OrderItemResponse();
-                item.setId(items.getId());
-                item.setProductId(items.getProduct().getId());
-                item.setProductName(items.getProductName());
-                item.setQuantity(items.getQuantity());
-                item.setPriceAtPurchase(items.getPriceAtPurchase());
-
-                itemDtoList.add(item);
-            }
-
-            dto.setOrderItems(itemDtoList);
+            OrderResponseDto dto =  createResponseDto(order);
             responseDtoList.add(dto);
         }
         return responseDtoList;
@@ -82,7 +62,7 @@ public class OrderServiceImp implements OrderService {
     {
         String email = authentication.getName();
         Users user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
 
         Optional<IdempotencyKey> existingKey =
                 idempotencyKeyRepo.findById(idempotencyKey);
@@ -94,7 +74,7 @@ public class OrderServiceImp implements OrderService {
            {
                return createResponseDto(order);
            }
-            throw new RuntimeException(
+            throw new InvalidIdempotencyKeyException(
                     "This idempotency key belongs to another user");
         }
 
@@ -160,7 +140,23 @@ public class OrderServiceImp implements OrderService {
        return createResponseDto(savedOrder);
     }
 
-    public OrderResponseDto createResponseDto(Order order)
+@Override
+@Transactional(readOnly = true)
+    public OrderResponseDto viewOrderById(Authentication authentication , Long orderId)
+    {
+        String email = authentication.getName();
+        Users user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
+
+        Order order   = orderRepo.findByIdAndUser_Id(orderId , user.getId()).orElseThrow(()->
+                new OrderNotFoundException("Order not found")
+        );
+
+        return createResponseDto(order);
+
+    }
+
+    private OrderResponseDto createResponseDto(Order order)
     {
 
         OrderResponseDto dto = new OrderResponseDto();

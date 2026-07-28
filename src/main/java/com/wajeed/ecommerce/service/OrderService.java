@@ -10,4 +10,5 @@ public interface OrderService
 {
     public List<OrderResponseDto> getUserOrderHistory(Authentication authentication);
     public OrderResponseDto placeAnOrder(Authentication authentication ,String idempotencyKey);
+    public OrderResponseDto viewOrderById(Authentication authentication , Long orderId);
 }
