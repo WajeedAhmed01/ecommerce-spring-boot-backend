@@ -36,4 +36,17 @@ public class CartController
        CartResponse cartResponse =  cartService.viewCart(authentication);
        return new ResponseEntity<>(cartResponse , HttpStatus.OK);
     }
+
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<String> removeCartItem(
+            Authentication authentication,
+            @PathVariable Long productId
+    ) {
+        cartService.removeCartItem(authentication, productId);
+
+        return new ResponseEntity<>(
+                "Product removed from cart",
+                HttpStatus.OK
+        );
+    }
 }
