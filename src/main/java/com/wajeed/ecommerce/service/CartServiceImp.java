@@ -1,5 +1,6 @@
 package com.wajeed.ecommerce.service;
 
+import com.wajeed.ecommerce.dto.CartItemRequest;
 import com.wajeed.ecommerce.dto.CartItemResponse;
 import com.wajeed.ecommerce.dto.CartRequest;
 import com.wajeed.ecommerce.dto.CartResponse;
@@ -28,33 +29,24 @@ import java.util.List;
 public class CartServiceImp implements CartService {
 
     private final CartRepository cartRepository;
-
     private final ProductRepository productRepository;
     private final UserRepo userRepo;
 
     @Autowired
     public CartServiceImp(CartRepository cartRepository,
-
                           ProductRepository productRepository,
-                          UserRepo userRepo) {
+                          UserRepo userRepo)
+    {
         this.cartRepository = cartRepository;
-
         this.productRepository = productRepository;
         this.userRepo = userRepo;
     }
 
     @Override
     @Transactional
-    public void addProductToCart(Authentication authentication, CartRequest cartRequest) {
-
-        String email = authentication.getName();
-
-        Users user = userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException
-                ("User Not Found"));
-
-        Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new CartNotFoundException(
-                        "Cart not found for user ID: " + user.getId()));
+    public void addProductToCart(Authentication authentication, CartRequest cartRequest)
+    {
+        Cart cart = getAuthenticatedCart(authentication);
 
         Product product = productRepository.findById(cartRequest.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(
@@ -100,16 +92,76 @@ public class CartServiceImp implements CartService {
         cartRepository.save(cart);
     }
 
+    @Override
+    @Transactional
+    public void removeCartItem(Authentication authentication,Long productId) {
+
+
+        Cart cart = getAuthenticatedCart(authentication);
+
+        CartItem cartItem = null;
+
+            for (CartItem item : cart.getCartItems()) {
+                if (item.getProduct().getId().equals(productId))
+                {
+                    cartItem = item;
+                    break;
+                }
+            }
+
+            if(cartItem == null)
+            {
+                throw new ProductNotFoundException("Product not found");
+            }
+            cart.getCartItems().remove(cartItem);
+
+           BigDecimal total = calculateCartTotal(cart);
+
+        cart.setPrice(total);
+        cartRepository.save(cart);
+    }
+    @Override
+    @Transactional
+    public void updateCartItem(Authentication authentication , Long productId,
+                               CartItemRequest cartItemRequest)
+    {
+
+        Cart cart = getAuthenticatedCart(authentication);
+
+        CartItem cartItem = null;
+
+        for (CartItem item : cart.getCartItems()) {
+            if (item.getProduct().getId().equals(productId))
+            {
+                cartItem = item;
+                break;
+            }
+        }
+
+        if(cartItem == null)
+        {
+            throw new ProductNotFoundException("Product not found");
+        }
+
+        if(cartItemRequest.getQuantity() > cartItem.getProduct().getStockQuantity())
+        {
+            throw new InsufficientStockException("Insufficient Stock");
+        }
+
+
+        cartItem.setQuantity(cartItemRequest.getQuantity());
+
+
+        BigDecimal total = calculateCartTotal(cart);
+
+        cart.setPrice(total);
+        cartRepository.save(cart);
+    }
+    @Override
     public CartResponse viewCart(Authentication authentication)
     {
-       String email =  authentication.getName();
+           Cart cart = getAuthenticatedCart(authentication);
 
-      Users user = userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException
-              ("User Not Found")
-      );
-      Cart cart = cartRepository.findByUserId(user.getId()).orElseThrow(()-> new CartNotFoundException(
-              "cart not found"
-      ));
         CartResponse cartResponse = new CartResponse();
         cartResponse.setCartId(cart.getId());
         cartResponse.setUserID(cart.getUser().getId());
@@ -139,40 +191,6 @@ public class CartServiceImp implements CartService {
         return cartResponse;
     }
 
-    @Override
-    @Transactional
-    public void removeCartItem(Authentication authentication,Long productId) {
-        String email = authentication.getName();
-
-        Users user = userRepo.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException
-                ("User Not Found")
-        );
-        Cart cart = cartRepository.findByUserId(user.getId()).orElseThrow(() -> new CartNotFoundException(
-                "cart not found"));
-
-
-        CartItem cartItem = null;
-
-            for (CartItem item : cart.getCartItems()) {
-                if (item.getProduct().getId().equals(productId))
-                {
-                    cartItem = item;
-                    break;
-                }
-            }
-
-            if(cartItem == null)
-            {
-                throw new ProductNotFoundException("Product not found");
-            }
-            cart.getCartItems().remove(cartItem);
-
-           BigDecimal total = calculateCartTotal(cart);
-
-        cart.setPrice(total);
-        cartRepository.save(cart);
-    }
-
     private BigDecimal calculateCartTotal(Cart cart)
     {
         BigDecimal finalCartPrice = BigDecimal.ZERO;
@@ -187,5 +205,17 @@ public class CartServiceImp implements CartService {
 
         }
         return finalCartPrice;
+    }
+
+    private Cart getAuthenticatedCart(Authentication authentication) {
+        String email = authentication.getName();
+
+        Users user = userRepo.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException
+                ("User Not Found"));
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CartNotFoundException(
+                        "Cart not found for user ID: " + user.getId()));
+        return cart;
     }
 }

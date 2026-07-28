@@ -1,8 +1,10 @@
 package com.wajeed.ecommerce.controller;
 
+import com.wajeed.ecommerce.dto.CartItemRequest;
 import com.wajeed.ecommerce.dto.CartRequest;
 import com.wajeed.ecommerce.dto.CartResponse;
 import com.wajeed.ecommerce.service.CartService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +50,15 @@ public class CartController
                 "Product removed from cart",
                 HttpStatus.OK
         );
+    }
+    @PutMapping("/{productId}")
+    public ResponseEntity<String> updateCartItem(
+            Authentication authentication,
+            @PathVariable Long productId,
+            @Valid @RequestBody CartItemRequest cartItemRequest) {
+
+        cartService.updateCartItem(authentication, productId, cartItemRequest);
+
+        return new ResponseEntity<>("Cart item updated successfully", HttpStatus.OK);
     }
 }
