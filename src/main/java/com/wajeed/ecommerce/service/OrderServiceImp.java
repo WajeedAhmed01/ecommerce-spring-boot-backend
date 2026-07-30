@@ -44,7 +44,7 @@ public class OrderServiceImp implements OrderService {
         Users user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        List<Order> orders = orderRepo.findByUserId(user.getId());
+        List<Order> orders = orderRepo. findByUserIdGetOrderWithOrderItems(user.getId());
         if (orders.isEmpty()) {
             throw new OrderNotFoundException("There are no OrderHistory for this userId: " + user.getId());
         }
@@ -150,7 +150,9 @@ public class OrderServiceImp implements OrderService {
         Users user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
 
-        Order order   = orderRepo.findByIdAndUser_Id(orderId , user.getId()).orElseThrow(()->
+
+        Order order   = orderRepo.findByIdAndUserIdWithOrderItemsAndProducts
+                (orderId , user.getId()).orElseThrow(()->
                 new OrderNotFoundException("Order not found")
         );
 
@@ -167,7 +169,7 @@ public class OrderServiceImp implements OrderService {
         Users user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
 
-        Order order   = orderRepo.findByIdAndUser_Id(orderId , user.getId()).orElseThrow(()->
+        Order order   = orderRepo. findByIdAndUserIdWithOrderItemsAndProducts(orderId , user.getId()).orElseThrow(()->
                 new OrderNotFoundException("Order not found")
         );
 
