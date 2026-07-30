@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.wajeed.ecommerce.model.OrderStatus.PLACED;
+
 @Service
 public class OrderServiceImp implements OrderService {
 
@@ -43,13 +45,13 @@ public class OrderServiceImp implements OrderService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         List<Order> orders = orderRepo.findByUserId(user.getId());
-
         if (orders.isEmpty()) {
             throw new OrderNotFoundException("There are no OrderHistory for this userId: " + user.getId());
         }
 
         List<OrderResponseDto> responseDtoList = new ArrayList<>();
-        for (Order order : orders) {
+        for (Order order : orders)
+        {
             OrderResponseDto dto =  createResponseDto(order);
             responseDtoList.add(dto);
         }
@@ -122,7 +124,7 @@ public class OrderServiceImp implements OrderService {
         order.setTotalPrice(totalOrderPrice);
         order.setUser(user);
         order.setOrderDate(LocalDateTime.now());
-        order.setStatus(OrderStatus.PLACED);
+        order.setStatus(PLACED);
 
         Order savedOrder = orderRepo.save(order);
 
@@ -140,8 +142,8 @@ public class OrderServiceImp implements OrderService {
        return createResponseDto(savedOrder);
     }
 
-@Override
-@Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public OrderResponseDto viewOrderById(Authentication authentication , Long orderId)
     {
         String email = authentication.getName();
@@ -152,9 +154,40 @@ public class OrderServiceImp implements OrderService {
                 new OrderNotFoundException("Order not found")
         );
 
+
         return createResponseDto(order);
 
     }
+
+    @Override
+    @Transactional
+    public OrderResponseDto cancelOrder(Authentication authentication, Long orderId)
+    {
+        String email = authentication.getName();
+        Users user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
+
+        Order order   = orderRepo.findByIdAndUser_Id(orderId , user.getId()).orElseThrow(()->
+                new OrderNotFoundException("Order not found")
+        );
+
+        if(order.getStatus()!=OrderStatus.PLACED)
+        {
+            throw new OrderCancellationNotAllowedException("Order cannot be cancelled");
+        }
+        for(OrderItem item: order.getOrderItems())
+        {
+           Product product = item.getProduct();
+           product.setStockQuantity(product.getStockQuantity()+item.getQuantity());
+           productRepository.save(product);
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        Order savedOrder = orderRepo.save(order);
+
+        return createResponseDto(savedOrder);
+    }
+
 
     private OrderResponseDto createResponseDto(Order order)
     {
@@ -166,7 +199,8 @@ public class OrderServiceImp implements OrderService {
         dto.setStatus(order.getStatus());
 
         List<OrderItemResponse> itemResponses = new ArrayList<>();
-        for (OrderItem item : order.getOrderItems()) {
+        for (OrderItem item : order.getOrderItems())
+        {
             OrderItemResponse itemResponse = new OrderItemResponse();
             itemResponse.setId(item.getId());
             itemResponse.setProductId(item.getProduct().getId());

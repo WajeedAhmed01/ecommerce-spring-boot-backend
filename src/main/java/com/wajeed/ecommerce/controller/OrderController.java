@@ -50,4 +50,15 @@ public class OrderController {
 
         return ResponseEntity.ok(order);
     }
+
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<OrderResponseDto> cancelOrder(
+            @PathVariable Long orderId,
+            Authentication authentication) {
+
+        OrderResponseDto response =
+                orderService.cancelOrder(authentication, orderId);
+
+        return ResponseEntity.ok(response);
+    }
 }

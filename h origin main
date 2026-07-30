@@ -1,0 +1,214 @@
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/controller/OrderController.java b/src/main/java/com/wajeed/ecommerce/controller/OrderController.java[m
+[1mindex eca3030..091c05c 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/controller/OrderController.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/controller/OrderController.java[m
+[36m@@ -50,4 +50,15 @@[m [mpublic class OrderController {[m
+ [m
+         return ResponseEntity.ok(order);[m
+     }[m
+[32m+[m
+[32m+[m[32m    @PutMapping("/{orderId}/cancel")[m
+[32m+[m[32m    public ResponseEntity<OrderResponseDto> cancelOrder([m
+[32m+[m[32m            @PathVariable Long orderId,[m
+[32m+[m[32m            Authentication authentication) {[m
+[32m+[m
+[32m+[m[32m        OrderResponseDto response =[m
+[32m+[m[32m                orderService.cancelOrder(authentication, orderId);[m
+[32m+[m
+[32m+[m[32m        return ResponseEntity.ok(response);[m
+[32m+[m[32m    }[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/exception/GlobalExceptionHandler.java b/src/main/java/com/wajeed/ecommerce/exception/GlobalExceptionHandler.java[m
+[1mindex 3f703ee..36557e6 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/exception/GlobalExceptionHandler.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/exception/GlobalExceptionHandler.java[m
+[36m@@ -9,7 +9,7 @@[m [mimport org.springframework.web.bind.annotation.RestControllerAdvice;[m
+ @RestControllerAdvice[m
+ public class GlobalExceptionHandler {[m
+ [m
+[31m-    @ExceptionHandler(MethodArgumentNotValidException.class )[m
+[32m+[m[32m    @ExceptionHandler(MethodArgumentNotValidException.class)[m
+     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {[m
+ [m
+         String errorMessage = ex.getBindingResult()[m
+[36m@@ -26,11 +26,13 @@[m [mpublic class GlobalExceptionHandler {[m
+         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);[m
+     }[m
+ [m
+[32m+[m
+     @ExceptionHandler({[m
+             SkuAlreadyExistException.class,[m
+             EmailAlreadyExistsException.class,[m
+             InvalidEmailException.class,[m
+[31m-            InvalidIdempotencyKeyException.class[m
+[32m+[m[32m            InvalidIdempotencyKeyException.class,[m
+[32m+[m[32m            OrderCancellationNotAllowedException.class[m
+     })[m
+     public ResponseEntity<ErrorResponse> handleBadRequestExceptions(RuntimeException ex) {[m
+ [m
+[36m@@ -43,6 +45,7 @@[m [mpublic class GlobalExceptionHandler {[m
+         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);[m
+     }[m
+ [m
+[32m+[m
+     @ExceptionHandler({[m
+             CategoryDoesNotExistException.class,[m
+             ProductNotFoundException.class,[m
+[36m@@ -63,8 +66,10 @@[m [mpublic class GlobalExceptionHandler {[m
+         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);[m
+     }[m
+ [m
+[32m+[m
+     @ExceptionHandler(RuntimeException.class)[m
+[31m-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {[m
+[32m+[m[32m    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex)[m
+[32m+[m[32m    {[m
+ [m
+         ErrorResponse error = new ErrorResponse([m
+                 HttpStatus.INTERNAL_SERVER_ERROR.value(),[m
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/exception/OrderCancellationNotAllowedException.java b/src/main/java/com/wajeed/ecommerce/exception/OrderCancellationNotAllowedException.java[m
+[1mindex 7be47d6..867603e 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/exception/OrderCancellationNotAllowedException.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/exception/OrderCancellationNotAllowedException.java[m
+[36m@@ -1,4 +1,8 @@[m
+ package com.wajeed.ecommerce.exception;[m
+ [m
+[31m-public class OrderCancellationNotAllowedException {[m
+[32m+[m[32mpublic class OrderCancellationNotAllowedException extends  RuntimeException[m
+[32m+[m[32m{[m
+[32m+[m[32m    public OrderCancellationNotAllowedException(String message) {[m
+[32m+[m[32m        super(message);[m
+[32m+[m[32m    }[m
+ }[m
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/repository/OrderRepo.java b/src/main/java/com/wajeed/ecommerce/repository/OrderRepo.java[m
+[1mindex fa59127..7a7c9db 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/repository/OrderRepo.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/repository/OrderRepo.java[m
+[36m@@ -2,6 +2,7 @@[m [mpackage com.wajeed.ecommerce.repository;[m
+ [m
+ import com.wajeed.ecommerce.model.Order;[m
+ import org.springframework.data.jpa.repository.JpaRepository;[m
+[32m+[m[32mimport org.springframework.data.jpa.repository.Query;[m
+ import org.springframework.stereotype.Repository;[m
+ [m
+ import java.util.List;[m
+[36m@@ -13,4 +14,6 @@[m [mpublic interface OrderRepo extends JpaRepository<Order, Long> {[m
+    List<Order> findByUserId(Long userId);[m
+ [m
+    Optional<Order> findByIdAndUser_Id(Long orderId , Long userId );[m
+[32m+[m
+[32m+[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/service/OrderService.java b/src/main/java/com/wajeed/ecommerce/service/OrderService.java[m
+[1mindex 5f4f096..fa48149 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/service/OrderService.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/service/OrderService.java[m
+[36m@@ -11,4 +11,5 @@[m [mpublic interface OrderService[m
+     public List<OrderResponseDto> getUserOrderHistory(Authentication authentication);[m
+     public OrderResponseDto placeAnOrder(Authentication authentication ,String idempotencyKey);[m
+     public OrderResponseDto viewOrderById(Authentication authentication , Long orderId);[m
+[32m+[m[32m    public OrderResponseDto cancelOrder(Authentication authentication, Long orderId);[m
+ }[m
+[1mdiff --git a/src/main/java/com/wajeed/ecommerce/service/OrderServiceImp.java b/src/main/java/com/wajeed/ecommerce/service/OrderServiceImp.java[m
+[1mindex 3f1816d..b6e8ad8 100644[m
+[1m--- a/src/main/java/com/wajeed/ecommerce/service/OrderServiceImp.java[m
+[1m+++ b/src/main/java/com/wajeed/ecommerce/service/OrderServiceImp.java[m
+[36m@@ -15,6 +15,8 @@[m [mimport java.util.ArrayList;[m
+ import java.util.List;[m
+ import java.util.Optional;[m
+ [m
+[32m+[m[32mimport static com.wajeed.ecommerce.model.OrderStatus.PLACED;[m
+[32m+[m
+ @Service[m
+ public class OrderServiceImp implements OrderService {[m
+ [m
+[36m@@ -43,13 +45,13 @@[m [mpublic class OrderServiceImp implements OrderService {[m
+                 .orElseThrow(() -> new UserNotFoundException("User not found"));[m
+ [m
+         List<Order> orders = orderRepo.findByUserId(user.getId());[m
+[31m-[m
+         if (orders.isEmpty()) {[m
+             throw new OrderNotFoundException("There are no OrderHistory for this userId: " + user.getId());[m
+         }[m
+ [m
+         List<OrderResponseDto> responseDtoList = new ArrayList<>();[m
+[31m-        for (Order order : orders) {[m
+[32m+[m[32m        for (Order order : orders)[m
+[32m+[m[32m        {[m
+             OrderResponseDto dto =  createResponseDto(order);[m
+             responseDtoList.add(dto);[m
+         }[m
+[36m@@ -122,7 +124,7 @@[m [mpublic class OrderServiceImp implements OrderService {[m
+         order.setTotalPrice(totalOrderPrice);[m
+         order.setUser(user);[m
+         order.setOrderDate(LocalDateTime.now());[m
+[31m-        order.setStatus(OrderStatus.PLACED);[m
+[32m+[m[32m        order.setStatus(PLACED);[m
+ [m
+         Order savedOrder = orderRepo.save(order);[m
+ [m
+[36m@@ -140,8 +142,8 @@[m [mpublic class OrderServiceImp implements OrderService {[m
+        return createResponseDto(savedOrder);[m
+     }[m
+ [m
+[31m-@Override[m
+[31m-@Transactional(readOnly = true)[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    @Transactional(readOnly = true)[m
+     public OrderResponseDto viewOrderById(Authentication authentication , Long orderId)[m
+     {[m
+         String email = authentication.getName();[m
+[36m@@ -152,10 +154,41 @@[m [mpublic class OrderServiceImp implements OrderService {[m
+                 new OrderNotFoundException("Order not found")[m
+         );[m
+ [m
+[32m+[m
+         return createResponseDto(order);[m
+ [m
+     }[m
+ [m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    @Transactional[m
+[32m+[m[32m    public OrderResponseDto cancelOrder(Authentication authentication, Long orderId)[m
+[32m+[m[32m    {[m
+[32m+[m[32m        String email = authentication.getName();[m
+[32m+[m[32m        Users user = userRepo.findByEmail(email)[m
+[32m+[m[32m                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));[m
+[32m+[m
+[32m+[m[32m        Order order   = orderRepo.findByIdAndUser_Id(orderId , user.getId()).orElseThrow(()->[m
+[32m+[m[32m                new OrderNotFoundException("Order not found")[m
+[32m+[m[32m        );[m
+[32m+[m
+[32m+[m[32m        if(order.getStatus()!=OrderStatus.PLACED)[m
+[32m+[m[32m        {[m
+[32m+[m[32m            throw new OrderCancellationNotAllowedException("Order cannot be cancelled");[m
+[32m+[m[32m        }[m
+[32m+[m[32m        for(OrderItem item: order.getOrderItems())[m
+[32m+[m[32m        {[m
+[32m+[m[32m           Product product = item.getProduct();[m
+[32m+[m[32m           product.setStockQuantity(product.getStockQuantity()+item.getQuantity());[m
+[32m+[m[32m           productRepository.save(product);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        order.setStatus(OrderStatus.CANCELLED);[m
+[32m+[m[32m        Order savedOrder = orderRepo.save(order);[m
+[32m+[m
+[32m+[m[32m        return createResponseDto(savedOrder);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m
+     private OrderResponseDto createResponseDto(Order order)[m
+     {[m
+ [m
+[36m@@ -166,7 +199,8 @@[m [mpublic class OrderServiceImp implements OrderService {[m
+         dto.setStatus(order.getStatus());[m
+ [m
+         List<OrderItemResponse> itemResponses = new ArrayList<>();[m
+[31m-        for (OrderItem item : order.getOrderItems()) {[m
+[32m+[m[32m        for (OrderItem item : order.getOrderItems())[m
+[32m+[m[32m        {[m
+             OrderItemResponse itemResponse = new OrderItemResponse();[m
+             itemResponse.setId(item.getId());[m
+             itemResponse.setProductId(item.getProduct().getId());[m
