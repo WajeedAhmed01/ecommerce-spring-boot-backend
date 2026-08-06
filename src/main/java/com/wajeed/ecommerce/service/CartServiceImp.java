@@ -11,7 +11,6 @@ import com.wajeed.ecommerce.model.Cart;
 import com.wajeed.ecommerce.model.CartItem;
 import com.wajeed.ecommerce.model.Product;
 import com.wajeed.ecommerce.model.Users;
-import com.wajeed.ecommerce.repository.CartItemRepo;
 import com.wajeed.ecommerce.repository.CartRepository;
 import com.wajeed.ecommerce.repository.ProductRepository;
 import com.wajeed.ecommerce.repository.UserRepo;
@@ -175,6 +174,7 @@ public class CartServiceImp implements CartService {
         cartRepository.save(cart);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public CartResponse viewCart(Authentication authentication)
     {
@@ -226,14 +226,16 @@ public class CartServiceImp implements CartService {
     }
 
     private Cart getAuthenticatedCart(Authentication authentication) {
+
         String email = authentication.getName();
 
-        Users user = userRepo.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException
-                ("User Not Found"));
+        Users user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
 
-        Cart cart = cartRepository.findByUserId(user.getId())
+        Cart cart = cartRepository.findCartWithItemsAndProducts(user.getId())
                 .orElseThrow(() -> new CartNotFoundException(
                         "Cart not found for user ID: " + user.getId()));
+
         return cart;
     }
 }
