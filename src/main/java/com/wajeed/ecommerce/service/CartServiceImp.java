@@ -232,10 +232,13 @@ public class CartServiceImp implements CartService {
         Users user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
 
-        Cart cart = cartRepository.findCartWithItemsAndProducts(user.getId())
-                .orElseThrow(() -> new CartNotFoundException(
-                        "Cart not found for user ID: " + user.getId()));
-
-        return cart;
+        return cartRepository.findCartWithItemsAndProducts(user.getId())
+                .orElseGet(() -> {
+                    Cart cart = new Cart();
+                    cart.setUser(user);
+                    cart.setPrice(BigDecimal.ZERO);
+                    cart.setCartItems(new ArrayList<>());
+                    return cartRepository.save(cart);
+                });
     }
 }
