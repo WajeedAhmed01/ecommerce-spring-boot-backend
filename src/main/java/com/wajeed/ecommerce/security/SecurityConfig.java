@@ -45,33 +45,29 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/users/register",
-                                "/api/users/login"
+                                "/api/users/login",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/products/**"
                         ).hasRole("ADMIN")
-
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/products/**"
                         ).hasRole("ADMIN")
-
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/products/**"
                         ).hasRole("ADMIN")
-
                         .requestMatchers(
                                 "/api/products/**"
                         ).permitAll()
-
                         .requestMatchers(
                                 "/api/cart/**",
                                 "/api/orders/**"
                         ).hasAnyRole("USER", "ADMIN")
-
                         .anyRequest()
                         .authenticated()
                 )
@@ -82,7 +78,6 @@ public class SecurityConfig {
                 )
                 .build();
     }
-
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
