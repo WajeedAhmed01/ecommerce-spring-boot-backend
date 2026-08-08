@@ -6,15 +6,14 @@ window.onload = function () {
 
         requestInterceptor: function (request) {
 
-            // Get JWT automatically from browser storage
+            // Get JWT token from browser storage
             const token = localStorage.getItem("jwt_token");
 
             if (token) {
                 request.headers["Authorization"] = "Bearer " + token;
             }
 
-            // Generate Idempotency-Key automatically
-            // for placing an order
+            // Generate Idempotency-Key automatically for place-order
             if (
                 request.method &&
                 request.method.toLowerCase() === "post" &&
@@ -28,22 +27,20 @@ window.onload = function () {
 
         responseInterceptor: function (response) {
 
-            // After successful login, automatically store JWT
+            // When login succeeds, save JWT token
             if (
-                response.url &&
-                response.url.includes("/api/users/login") &&
+                response.url.includes("/login") &&
                 response.status === 200
             ) {
                 try {
-                    const body = JSON.parse(response.text);
+                    const data = JSON.parse(response.data);
 
-                    if (body.token) {
-                        localStorage.setItem("jwt_token", body.token);
-                        console.log("JWT stored automatically");
+                    if (data.token) {
+                        localStorage.setItem("jwt_token", data.token);
+                        console.log("JWT token saved automatically");
                     }
-
-                } catch (error) {
-                    console.error("Could not store JWT:", error);
+                } catch (e) {
+                    console.error("Could not save JWT token", e);
                 }
             }
 
